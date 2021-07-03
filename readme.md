@@ -25,9 +25,40 @@ Now open your browser and go to http://localhost:3000/ for the webapp, here you 
 
 For API, go to http://localhost:3000/api, here you will get a json output of all the people in the database, you can get specific people on the endpoint: http://localhost:3000/api/[ID]. Also you can add new people by a post request on the API url:
 ``` bash
-curl -H "Content-Type: application/json" -d '{ "name": "New Person", "age": 31 }' localhost:3000/api
+curl -H "Content-Type: application/json" -d '{ "input": {"name": "New Person", "age": 31} }' localhost:3000/api
 ```
 
 ## References
 1. https://www.spock.li/tutorials/rest-api
 2. https://haskell-at-work.com/episodes/2018-04-09-your-first-web-application-with-spock.html
+
+# Integrating API with Hasura
+Now we can use the API endpoint with Hasura Actions to expose a GraphQL endpoint where we can use the Spock API.
+## Start Hasura in Docker
+First we need to start Hasura in Docker (as we have the API exposed in localhost). Go to https://hasura.io/docs/latest/graphql/core/getting-started/docker-simple.html for a simple guide to run Hasura in Docker, or you can just follow along if you have already setup everything.
+
+After setting up Hasura on docker, we need to add the API in Hasura Actions, follow along to add the API in Hasura Actions.
+
+1. Go to Actions tab on the top, you will get something like the following:
+![Hasura Actions Page](img/1.png?raw=true "Actions Page")
+
+2. Now click on `Create` button, you will get the following page, where we will define our Action.
+![Add a new Action](img/2.png?raw=true "New Action Page")
+
+3. Now fill the following in the feilds:
+    1. Action definition:
+    ``` graphql
+    type Mutation {
+        api (
+            name: String!
+            age: Int!
+        ): SampleOutput
+    }
+    ```
+    2. New types definition:
+    ``` graphql
+    type SampleOutput {
+        result : String!
+        id : String!
+    }
+    ```

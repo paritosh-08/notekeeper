@@ -14,6 +14,7 @@
 {-# LANGUAGE StandaloneDeriving #-}
 {-# LANGUAGE UndecidableInstances #-}
 {-# LANGUAGE DataKinds #-}
+{-# LANGUAGE ScopedTypeVariables #-}
 
 module Main where
 
@@ -40,6 +41,11 @@ type Server = SpockM SqlBackend () () ()
 
 type ApiAction a = SpockAction SqlBackend () () a
 
+newtype GetInput a = GetInput { getInput :: a } deriving (Show)
+
+instance FromJSON a => FromJSON (GetInput a) where
+    parseJSON = withObject "GetInput" $ \o -> GetInput <$> o .: "input"
+
 share [mkPersist sqlSettings, mkMigrate "migrateAll"] [persistLowerCase|
 Person json -- The json keyword will make Persistent generate sensible ToJSON and FromJSON instances for us.
   name Text
@@ -47,7 +53,7 @@ Person json -- The json keyword will make Persistent generate sensible ToJSON an
   deriving Show
 |]
 
-runSQL :: (HasSpock m, SpockConn m ~ SqlBackend)  => SqlPersistT (LoggingT IO) a -> m a
+runSQL :: (HasSpock m, SpockConn m~ SqlBackend)  => SqlPersistT (LoggingT IO) a -> m a
 runSQL action = runQuery $ \conn -> runStdoutLoggingT $ runSqlConn action conn
 
 errorJson :: Int -> Text -> ApiAction ()
@@ -91,12 +97,19 @@ app = do
         allPeople <- runSQL $ selectList [] [Asc PersonId]
         json allPeople
     post "api" $ do
-        maybePerson <- jsonBody :: ApiAction (Maybe Person)
+        -- this belongs in the POST handler...
+        (maybePerson :: Maybe (GetInput Person)) <- jsonBody
+        case maybePerson of
+            Nothing -> errorJson 1 "Failed to parse request body as Person"
+            Just (GetInput thePerson) -> do
+                newId <- runSQL $ insert thePerson
+                json $ object ["result" .= String "success", "id" .= newId]
+        {- maybePerson <- jsonBody :: ApiAction (Maybe Person)
         case maybePerson of
             Nothing -> errorJson 1 "Failed to parse request body as Person"
             Just thePerson -> do
                 newId <- runSQL $ insert thePerson
-                json $ object ["result" .= String "success", "id" .= newId]
+                json $ object ["result" .= String "success", "id" .= newId] -}
     get ("api" <//> var) $ \personId -> do
         maybePerson <- runSQL $ P.get personId :: ApiAction (Maybe Person)
         case maybePerson of
