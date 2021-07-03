@@ -97,19 +97,13 @@ app = do
         allPeople <- runSQL $ selectList [] [Asc PersonId]
         json allPeople
     post "api" $ do
-        -- this belongs in the POST handler...
         (maybePerson :: Maybe (GetInput Person)) <- jsonBody
         case maybePerson of
             Nothing -> errorJson 1 "Failed to parse request body as Person"
             Just (GetInput thePerson) -> do
                 newId <- runSQL $ insert thePerson
                 json $ object ["result" .= String "success", "id" .= newId]
-        {- maybePerson <- jsonBody :: ApiAction (Maybe Person)
-        case maybePerson of
-            Nothing -> errorJson 1 "Failed to parse request body as Person"
-            Just thePerson -> do
-                newId <- runSQL $ insert thePerson
-                json $ object ["result" .= String "success", "id" .= newId] -}
+        
     get ("api" <//> var) $ \personId -> do
         maybePerson <- runSQL $ P.get personId :: ApiAction (Maybe Person)
         case maybePerson of
