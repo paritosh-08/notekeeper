@@ -45,7 +45,7 @@ After setting up Hasura on docker, we need to add the API in Hasura Actions, fol
 2. Now click on `Create` button, you will get the following page, where we will define our Action.
 ![Add a new Action](img/2.png?raw=true "New Action Page")
 
-3. Now fill the following in the feilds:
+3. Now fill the following in the fields:
     1. Action definition:
         ``` graphql
         type Mutation {
